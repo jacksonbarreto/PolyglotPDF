@@ -433,7 +433,7 @@ class ThirdParty_translation:
             'You are a professional translator. Translate from {original_lang} to {target_lang}. Return only the translation without explanations or notes.')
 
     async def translate_single(self, session, text, original_lang, target_lang):
-        """单个文本的异步翻译"""
+        """单个文本的异步翻译，带重试；失败时返回原文，避免 PDF 出现空白块"""
         payload = {
             "model": self.model,
             "messages": [
@@ -450,21 +450,35 @@ class ThirdParty_translation:
             "stream": False
         }
 
-        try:
-            async with session.post(self.url, headers=self.headers, json=payload) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    translated_text = result['choices'][0]['message']['content'].strip()
-                    # 添加调试日志
-                    #print(f"ThirdParty translated: '{text[:30]}...' -> '{translated_text[:30]}...'")
-                    return translated_text
-                else:
-                    error_text = await response.text()
-                    print(f"Error: {response.status}, Details: {error_text}")
-                    return ""
-        except Exception as e:
-            print(f"Error in translation: {e}")
-            return ""
+        last_error = None
+
+        for attempt in range(1, 4):
+            try:
+                async with session.post(self.url, headers=self.headers, json=payload) as response:
+                    response_text = await response.text()
+
+                    if response.status == 200:
+                        result = await response.json()
+                        translated_text = result['choices'][0]['message']['content'].strip()
+
+                        if translated_text:
+                            return translated_text
+
+                        last_error = "empty translation"
+                        print(f"Error: empty translation, attempt {attempt}/3")
+                    else:
+                        last_error = f"HTTP {response.status}: {response_text[:500]}"
+                        print(f"Error: {response.status}, attempt {attempt}/3, Details: {response_text[:500]}")
+
+            except Exception as e:
+                last_error = repr(e)
+                print(f"Error in translation, attempt {attempt}/3: {e}")
+
+            await asyncio.sleep(1.5 * attempt)
+
+        print(f"Translation failed after retries. Returning original text. Last error: {last_error}")
+        return text
+
 
     async def translate(self, texts, original_lang, target_lang):
         """异步批量翻译"""
