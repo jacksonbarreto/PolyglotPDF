@@ -45,7 +45,7 @@ async function loadBatchData() {
       const readStatus = item.read === "1" ? "Read" : "Unread";
 
       // 注意：后端返回没有作者的话，可以用Unknown
-      const author = item.author || "Unknown author";
+      const author = item.author || "Autor desconhecido";
       const original_lan = item.original_language ;
       const target_lan = item.target_language;
 
@@ -53,7 +53,7 @@ async function loadBatchData() {
         <div class="batch-card-title"><strong>${item.name}</strong></div>
         <div class="batch-card-info">
           <p>Date: ${item.date}</p>
-          <p>Author: ${author}</p>
+          <p>Autor: ${author}</p>
           <p>Status: ${readStatus}  ||  Convertion: 
 
 ${original_lan} to ${target_lan}</p>

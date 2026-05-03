@@ -201,7 +201,7 @@ def translate_files():
         if not files:
             return jsonify({"error": "No files provided"}), 400
 
-        target_lang = data.get('targetLang', 'zh')
+        target_lang = data.get('targetLang', 'pt')
         original_lang = data.get('sourceLang', 'en')  # 默认改为 'en'
 
         print(f"Processing files: {files}, target: {target_lang}, source: {original_lang}")

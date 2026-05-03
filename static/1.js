@@ -121,7 +121,7 @@ try {
         const infoDiv = document.createElement('div');
         infoDiv.className = 'article-info';
         infoDiv.innerHTML = `
-            <span class="author">${article.author || 'Unknown author'}</span>
+            <span class="author">${article.author || 'Autor desconhecido'}</span>
             <span class="date">${article.date}</span>
             <span class="language">${article.original_language} - ${article.target_language}</span>
         `;
