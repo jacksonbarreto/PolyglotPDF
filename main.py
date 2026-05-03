@@ -417,6 +417,13 @@ class main_function:
             
             # 先覆盖所有区域
             for block in blocks:
+                # Preserve oversized decorative text such as mastheads, logos and drop caps.
+                # Translating/redrawing these blocks often causes overlap and destroys layout.
+                original_text = block[0]
+                text_size = float(block[7]) if len(block) > 7 else 12
+                if text_size >= 45:
+                    continue
+
                 coords = block[1]  # (x0, y0, x1, y1)
                 
                 # 智能计算扩展比例，根据翻译文本和原文的长度比来决定

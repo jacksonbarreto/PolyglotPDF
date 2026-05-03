@@ -8,6 +8,22 @@ import re
 import unicodedata
 from collections import defaultdict
 
+LIGATURE_MAP = str.maketrans({
+    "ﬁ": "fi",
+    "ﬂ": "fl",
+    "ﬃ": "ffi",
+    "ﬄ": "ffl",
+    "ﬀ": "ff",
+    "ﬅ": "ft",
+    "ﬆ": "st",
+})
+
+def normalize_pdf_text(text):
+    if not text:
+        return text
+    return text.translate(LIGATURE_MAP)
+
+
 MATH_FONTS_SET = {
     "CMMI", "CMSY", "CMEX", "CMMI5", "CMMI6", "CMMI7", "CMMI8", "CMMI9", "CMMI10",
     "CMSY5", "CMSY6", "CMSY7", "CMSY8", "CMSY9", "CMSY10",
@@ -221,6 +237,16 @@ condition_5 = (
         prev_line = merged[-1]
         x0, y0, x1, y1 = line["line_bbox"]
         px0, py0, px1, py1 = prev_line["line_bbox"]
+
+        # Hard barrier: do not merge oversized decorative text with normal text.
+        # This preserves mastheads, logos and drop caps without preventing normal paragraphs from merging.
+        curr_font_size_guard = line["font_size"] if line["font_size"] else 10
+        prev_font_size_guard = prev_line["font_size"] if prev_line["font_size"] else 10
+        if (curr_font_size_guard >= 45) != (prev_font_size_guard >= 45):
+            merged.append(line)
+            i += 1
+            continue
+
         current_width = (x1 - x0)
         prev_width = (px1 - px0)
         prev_indent = prev_line['indent']
@@ -784,7 +810,7 @@ def get_new_blocks(page, pdf_path=None, page_num=None):
                 font_names_set = set()
 
                 for span in filtered_spans:
-                    span_text = span["text"]
+                    span_text = normalize_pdf_text(span["text"])
                     full_text += span_text
                     font_sizes.add(span["size"])
                     colors.add(span["color"])
