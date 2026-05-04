@@ -433,9 +433,34 @@ class main_function:
                 # 计算扩展因子：最大限制为5%的扩展
                 len_ratio = min(1.05, max(1.01, len(translated_text) / max(1, len(original_text))))
                 
-                x0, y0, x1, y1 = coords
+                try:
+                    x0, y0, x1, y1 = [float(v) for v in coords]
+                except Exception as e:
+                    print(f"Skipping block with invalid coordinates: {coords} | {e}")
+                    continue
+
+                # Normalize malformed rectangles, including rotated labels where x0 > x1 or y0 > y1.
+                x0, x1 = sorted((x0, x1))
+                y0, y1 = sorted((y0, y1))
+
+                # Skip unusable rectangles instead of crashing the whole translation.
+                if any((v != v or abs(v) > 1000000) for v in (x0, y0, x1, y1)):
+                    print(f"Skipping block with non-finite or huge coordinates: {(x0, y0, x1, y1)}")
+                    continue
+
                 width = x1 - x0
                 height = y1 - y0
+
+                if width <= 0.5 or height <= 0.5:
+                    print(f"Skipping block with empty/tiny rectangle: {(x0, y0, x1, y1)}")
+                    continue
+
+                block_angle = block[3] if len(block) > 3 else 0
+                # Very narrow rotated labels can make insert_htmlbox hang or fail.
+                # Keep them as original instead of blocking the whole PDF generation.
+                if block_angle in (90, 270) and min(width, height) < 6:
+                    print(f"Skipping tiny rotated label: angle={block_angle}, rect={(x0, y0, x1, y1)}, text={str(original_text)[:80]!r}")
+                    continue
                 
                 # 只向右侧扩展，不改变左侧起点
                 h_expand = (len_ratio - 1) * width
